@@ -4,23 +4,44 @@ import fs from 'fs';
 import path from 'path';
 const net = new brain.NeuralNetwork();
 
-fs.readFile(path.join(__dirname, '/resources/indevizible.csv'), (err, data) => {
-  if (err) {
-    return console.log(err);
-  }
-  const csv = data.toString('utf8');
-  const arr = Parser.parse(csv);
-  net.train(arr);
-  fs.readFile(path.join(__dirname, '/resources/test.csv'), (err, data) => {
-    if (err) return console.log(err);
-    const test = Parser.parse(data.toString('utf8'));
-    test.forEach(v => {
+const readFiles = (dir) => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(dir, (err, files) => {
+      err ? reject(err) : resolve(files);
+    });
+  });
+};
+
+const getData = (fileName) => {
+  return new Promise((resolve, reject) => {
+    fs.readFile(fileName, (err, data) => {
+      err ? reject(err) : resolve(Parser.parse(data.toString('utf8')));
+    });
+  });
+};
+
+readFiles(path.join(__dirname, '/resources'))
+  .then(files => {
+    return Promise.all(files.map(file => getData(path.join(__dirname, '/resources', file))));
+  })
+  .then(data => {
+    data.forEach(d => {
+      if (d.length) {
+        net.train(d);
+      }
+    });
+    return getData(path.join(__dirname, '/tests/test.csv'));
+  })
+  .then(data => {
+    data.forEach(v => {
       const rst = net.run(v.input);
       console.log(`
       {
-        expect: ${JSON.stringify(v.output)}, 
+        expect: ${JSON.stringify(v.output)},
         actual: ${JSON.stringify(rst)}
       }`);
     });
+  })
+  .catch(e => {
+    console.log(e);
   });
-});
