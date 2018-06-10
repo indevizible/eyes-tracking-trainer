@@ -20,6 +20,20 @@ const getData = (fileName) => {
   });
 };
 
+const accurateScore = (expect, actual) => {
+  const approx = (a) => {
+    return a > 0.75 ? 1 : (a < 0.25 ? 0 : 0.5);
+  };
+  let score = 0;
+  if (expect.lookAtPositionX === approx(actual.lookAtPositionX)) {
+    score += 0.5;
+  }
+  if (expect.lookAtPositionY === approx(actual.lookAtPositionY)) {
+    score += 0.5;
+  }
+  return score;
+};
+
 readFiles(path.join(__dirname, '/resources'))
   .then(files => {
     return Promise.all(files.map(file => getData(path.join(__dirname, '/resources', file))));
@@ -33,6 +47,8 @@ readFiles(path.join(__dirname, '/resources'))
     return getData(path.join(__dirname, '/tests/test.csv'));
   })
   .then(data => {
+    let score = 0;
+    let fullScore = 0;
     data.forEach(v => {
       const rst = net.run(v.input);
       console.log(`
@@ -40,7 +56,10 @@ readFiles(path.join(__dirname, '/resources'))
         expect: ${JSON.stringify(v.output)},
         actual: ${JSON.stringify(rst)}
       }`);
+      fullScore++;
+      score += accurateScore(v.output, rst);
     });
+    console.log(`score: ${score}/${fullScore}`);
   })
   .catch(e => {
     console.log(e);
